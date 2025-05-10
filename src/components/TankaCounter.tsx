@@ -1,3 +1,5 @@
+```tsx
+// TankaCounter.tsx
 import React, { useState, useRef } from "react";
 
 /* ───────── 5-7-5-7-7 ───────── */
@@ -46,18 +48,12 @@ const split = (t: string) => {
   return out;
 };
 
-/* ====================================================
-                       Component
-   ==================================================== */
 const TankaCounter: React.FC = () => {
-  const [src,   setSrc]   = useState("");
-  const [dst,   setDst]   = useState("");            // ← 清書欄
-  const [mora,  setMora]  = useState(0);
+  const [src, setSrc] = useState("");
+  const [mora, setMora] = useState(0);
   const [lines, setLines] = useState<string[]>([]);
-  const [flip,  setFlip]  = useState<boolean[]>(Array(5).fill(false));
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  /* 入力処理 ---------------------------------------- */
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     setSrc(v);
@@ -65,78 +61,61 @@ const TankaCounter: React.FC = () => {
     const m = countMora(v);
     setMora(m);
 
-    /* 区切りと表示用スラッシュ */
     const raw = split(v);
-    let start = false;
     setLines(
-      raw.map(s => {
-        if (!start && s.trim() === "") return "";
-        start = true;
-        return s.trim() ? s + "／" : "／";
-      })
-    );
-
-    /* バッジ反転 */
-    let acc = 0;
-    setFlip(
-      STEP.map(st => {
-        acc += st;
-        return m >= acc;
-      })
+      raw.map((s, i) => s.trim() ? s + "／" : "／")
     );
   };
 
   const clear = () => {
-    setSrc(""); setDst(""); setLines([]); setMora(0); setFlip(Array(5).fill(false));
+    setSrc(""); setLines([]); setMora(0);
     ref.current?.focus();
   };
 
-  /* JSX --------------------------------------------- */
+  // 表示用のテキストを組み立て
+  const overlayText = lines.join("\n");
+
   return (
     <div className="card">
-
       <h1>短歌音数カウンター</h1>
       <p className="sub">ひらがなで入力すると 5-7-5-7-7 に区切ります。</p>
 
       <label className="lbl">短歌を入力</label>
-      <textarea
-        ref={ref}
-        value={src}
-        placeholder="ひらがなで短歌を入力…"
-        onChange={onChange}
-      />
+      <div className="overlay-container">
+        <pre className="overlay-text">{overlayText}</pre>
+        <textarea
+          ref={ref}
+          value={src}
+          placeholder="ひらがなで短歌を入力…"
+          onChange={onChange}
+        />
+      </div>
 
       <div className="info">
-        {mora} 音
-        {mora > 0 && mora !== TOTAL &&
-          <span className="std">(標準 {TOTAL} 音)</span>}
+        {mora} 音{mora > 0 && mora !== TOTAL && <span className="std">(標準 {TOTAL} 音)</span>}
       </div>
 
       <button onClick={clear}>入力をクリア</button>
 
-      {/* ------------- 結果 ------------- */}
       {lines.length > 0 && (
         <>
           <h2>結果</h2>
           <div className="result">
             {lines.map((l,i)=> l && <span key={i}>{l}</span>)}
           </div>
-
           <div className="badges">
             {STEP.map((n,i)=>(
-              <span key={i} className={flip[i]?"badge over":"badge"}>
+              <span key={i} className={mora >= STEP.slice(0,i+1).reduce((a,b)=>a+b, 0) ? "badge over" : "badge"}>
                 {n}音
               </span>
             ))}
           </div>
-
-          {/* ------------- 清書欄 ------------- */}
-          <h2 style={{marginTop:"2.5rem"}}>清書欄</h2>
+          <h2 className="ks">清書欄</h2>
           <textarea
-            value={dst}
-            onChange={e=>setDst(e.target.value)}
+            value={""}
+            onChange={() => {}}
             placeholder="漢字・カタカナを含む清書をここに入力…"
-            style={{height:"6rem"}}
+            style={{ height: "6rem" }}
           />
         </>
       )}
@@ -145,3 +124,38 @@ const TankaCounter: React.FC = () => {
 };
 
 export default TankaCounter;
+```
+
+```css
+/* App.css に追記 */
+.overlay-container {
+  position: relative;
+}
+
+.overlay-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0.75rem;
+  pointer-events: none;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.overlay-container textarea {
+  position: relative;
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.75rem;
+  background: transparent;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  resize: vertical;
+  line-height: 1.6;
+  color: #fff;
+}
+```
