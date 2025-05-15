@@ -1,0 +1,93 @@
+/* =========================
+   テーマ変数
+   ========================= */
+:root.theme-dark{
+  --page-bg:#202020; --bg:#202020; --fg:#fff;
+  --border:#fff; --accent-bg:#fff; --accent-fg:#000;
+}
+:root.theme-light{
+  --page-bg:#fff;    --bg:#fff;    --fg:#000;
+  --border:#000; --accent-bg:#000; --accent-fg:#fff;
+}
+html.theme-dark,body.theme-dark,
+html.theme-light,body.theme-light{
+  background:var(--page-bg); color:var(--fg);
+}
+
+/* =========================
+   カード
+   ========================= */
+.tanka-card{
+  position:relative;
+  padding:2.75rem 1rem 1rem;      /* ← 上にさらに 0.5rem 余裕 */
+  border:1px solid var(--border); border-radius:8px;
+  background:var(--bg); color:var(--fg);
+  max-width:600px; margin:0 auto;
+}
+.tanka-card h1{
+  margin:0 0 .5rem; text-align:center; font-weight:700;
+  white-space:nowrap; font-size:clamp(1.8rem,8vw,2.8rem);
+}
+
+/* ── テーマ切替アイコン（カード右上） ── */
+.mode-toggle{
+  position:absolute;
+  top:.25rem;                     /* ← 0.75rem → 0.25rem で上へ */
+  right:.75rem;
+  padding:0; font-size:1.6rem; line-height:1;
+  background:transparent!important; border:none; color:var(--fg);
+  cursor:pointer; user-select:none; transition:color .15s;
+  appearance:none; -webkit-appearance:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.mode-toggle:hover      { color:var(--accent-bg); }
+.mode-toggle:focus,
+.mode-toggle:active     { outline:none; background:transparent!important; }
+
+/* =========================
+   以下は従来と同じ
+   ========================= */
+.sub{margin:0 0 1rem;text-align:center;white-space:normal;
+     font-size:clamp(.75rem,4vw,1rem);letter-spacing:.05em;}
+
+.sticky-meta{margin-bottom:.25rem;}
+@media(max-width:640px){
+  .sticky-meta{position:sticky;top:0;background:var(--bg);
+               padding-top:.25rem;z-index:10;}
+}
+.segments{display:flex;gap:.5rem;justify-content:center;margin-bottom:.25rem;}
+.badge{padding:.25rem .75rem;border-radius:9999px;font-size:.875rem;}
+.badge.segment{border:1px solid var(--border);background:transparent;color:var(--fg);}
+.badge.segment.ok{background:var(--accent-bg);color:var(--accent-fg);}
+.total-count{text-align:center;font-size:1rem;}
+
+.preview{text-align:center;font-size:1.25rem;line-height:1.6;padding:.5rem 0;}
+
+textarea{
+  box-sizing:border-box;width:100%;min-height:6rem;padding:.75rem;
+  border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);color:var(--fg);caret-color:var(--fg);resize:vertical;
+}
+@media(max-width:640px){
+  textarea{min-height:3.5rem;max-height:30vh;}
+  .preview{font-size:1.05rem;}
+}
+
+button:not(.mode-toggle){
+  display:block;margin:.75rem auto 1rem;padding:.5rem 1rem;
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--bg);color:var(--fg);cursor:pointer;
+  transition:background .15s,color .15s;
+}
+button:not(.mode-toggle):hover{
+  background:var(--accent-bg);color:var(--accent-fg);
+}
+
+.clean{margin-top:.5rem;}
+
+.tanka-card textarea{
+  border:1px solid var(--border)!important;outline:none;
+}
+.tanka-card textarea:focus{
+  border-color:var(--border)!important;box-shadow:0 0 0 1px var(--border);
+}

@@ -1,161 +1,143 @@
-```tsx
-// TankaCounter.tsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import "./TankaCounter.css";
 
-/* ───────── 5-7-5-7-7 ───────── */
+/* ── 定数 ── */
 const STEP  = [5, 7, 5, 7, 7];
 const TOTAL = 31;
 
-/* ひらがな簡易カウンタ ------------------------------ */
-const SMALL  = /[ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ]/;
-const XTU    = /[っッ]/;
+/* ── 音数カウント ── */
+const SMALL  = /[ぁぃぅぇぉゃゅょゎ]/;
+const XTU    = /[っ]/;
 const CHOON  = /ー/;
-const IGNORE = /[「」"'（）\s、。…〜！？・]/;
+const IGNORE = /[「」"'（）\\s、。…〜！？・]/;
 
-const countMora = (t: string) => {
-  let n = 0;
-  for (let i = 0; i < t.length; i++) {
-    const c = t[i];
-    if (IGNORE.test(c)) continue;
-    if (XTU.test(c) || CHOON.test(c)) { n++; continue; }
-    if (i + 1 < t.length && SMALL.test(t[i + 1])) { n++; i++; continue; }
-    if (SMALL.test(c)) continue;
-    n++;
+function countMora(text: string): number {
+  let c = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (IGNORE.test(ch)) continue;
+
+    if (XTU.test(ch) || CHOON.test(ch)) { c++; continue; }
+    if (i + 1 < text.length && SMALL.test(text[i + 1])) { c++; i++; continue; }
+    if (SMALL.test(ch)) continue;
+    c++;
   }
-  return n;
-};
-
-/* 左から STEP ごとに区切る -------------------------- */
-const split = (t: string) => {
-  const out: string[] = [];
-  let cur = 0;
+  return c;
+}
+function splitTanka(text: string): string[] {
+  const parts: string[] = [];
+  let idx = 0;
   for (const need of STEP) {
-    let got = 0, end = cur;
-    while (got < need && end < t.length) {
-      const c = t[end];
-      if (!IGNORE.test(c)) {
-        if (XTU.test(c) || CHOON.test(c)) { got++; end++; continue; }
-        if (end + 1 < t.length && SMALL.test(t[end + 1])) { got++; end += 2; continue; }
-        if (SMALL.test(c)) { end++; continue; }
+    let got = 0, end = idx;
+    while (got < need && end < text.length) {
+      const ch = text[end];
+      if (!IGNORE.test(ch)) {
+        if (XTU.test(ch) || CHOON.test(ch)) { got++; end++; continue; }
+        if (end + 1 < text.length && SMALL.test(text[end + 1])) { got++; end += 2; continue; }
+        if (SMALL.test(ch)) { end++; continue; }
         got++;
       }
       end++;
     }
-    out.push(t.slice(cur, end));
-    cur = end;
+    parts.push(text.slice(idx, end));
+    idx = end;
   }
-  if (cur < t.length) out.push(t.slice(cur));
-  return out;
-};
+  return parts;
+}
 
+/* ── メインコンポーネント ── */
 const TankaCounter: React.FC = () => {
-  const [src, setSrc] = useState("");
-  const [mora, setMora] = useState(0);
-  const [lines, setLines] = useState<string[]>([]);
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const [raw, setRaw] = useState("");
+  const areaRef       = useRef<HTMLTextAreaElement>(null);
+  const stickyRef     = useRef<HTMLDivElement>(null);
 
-  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const v = e.target.value;
-    setSrc(v);
+  /* true = dark */
+  const [darkMode, setDarkMode] = useState<boolean>(() =>
+    localStorage.getItem("tanka-theme") !== "light"
+  );
 
-    const m = countMora(v);
-    setMora(m);
+  /* ルートにテーマクラスを付与 */
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    root.classList.remove("theme-dark", "theme-light");
+    body.classList.remove("theme-dark", "theme-light");
+    const c = darkMode ? "theme-dark" : "theme-light";
+    root.classList.add(c);
+    body.classList.add(c);
+    localStorage.setItem("tanka-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
-    const raw = split(v);
-    setLines(
-      raw.map((s, i) => s.trim() ? s + "／" : "／")
+  /* モバイル時スクロール */
+  useEffect(() => {
+    if (window.innerWidth <= 640) {
+      stickyRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [raw]);
+
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) =>
+    setRaw(e.target.value.replace(/／/g, ""));
+  const clear = () => { setRaw(""); areaRef.current?.focus(); };
+
+  const mora  = countMora(raw);
+  const parts = splitTanka(raw);
+
+  /* 句バッジ生成 */
+  let cum = 0;
+  const segmentBadges = STEP.map((need, i) => {
+    cum += need;
+    const done = mora >= cum;
+    return (
+      <span key={i} className={`badge segment ${done ? "ok" : ""}`}>
+        {need}音
+      </span>
     );
-  };
-
-  const clear = () => {
-    setSrc(""); setLines([]); setMora(0);
-    ref.current?.focus();
-  };
-
-  // 表示用のテキストを組み立て
-  const overlayText = lines.join("\n");
+  });
 
   return (
-    <div className="card">
+    <div className="tanka-card">
       <h1>短歌音数カウンター</h1>
+
+      {/*── 記号だけの切替ボタン ──*/}
+      <button
+        type="button"
+        className="mode-toggle"
+        onClick={() => setDarkMode(!darkMode)}
+        aria-label={darkMode ? "ライトモードへ切替" : "ダークモードへ切替"}
+      >
+        {darkMode ? "☀︎" : "☾"}
+      </button>
+
       <p className="sub">ひらがなで入力すると 5-7-5-7-7 に区切ります。</p>
 
-      <label className="lbl">短歌を入力</label>
-      <div className="overlay-container">
-        <pre className="overlay-text">{overlayText}</pre>
-        <textarea
-          ref={ref}
-          value={src}
-          placeholder="ひらがなで短歌を入力…"
-          onChange={onChange}
-        />
+      <div ref={stickyRef} className="sticky-meta">
+        <div className="segments">{segmentBadges}</div>
+        <p className="total-count">{mora} 音 / 標準 {TOTAL} 音</p>
       </div>
 
-      <div className="info">
-        {mora} 音{mora > 0 && mora !== TOTAL && <span className="std">(標準 {TOTAL} 音)</span>}
+      <div className="preview">
+        {parts.map((p, i) => (
+          <React.Fragment key={i}>{p}／</React.Fragment>
+        ))}
       </div>
+
+      <label className="lbl">短歌を入力</label>
+      <textarea
+        ref={areaRef}
+        value={raw}
+        onChange={onChange}
+        placeholder="ひらがなで短歌を入力…"
+      />
 
       <button onClick={clear}>入力をクリア</button>
 
-      {lines.length > 0 && (
-        <>
-          <h2>結果</h2>
-          <div className="result">
-            {lines.map((l,i)=> l && <span key={i}>{l}</span>)}
-          </div>
-          <div className="badges">
-            {STEP.map((n,i)=>(
-              <span key={i} className={mora >= STEP.slice(0,i+1).reduce((a,b)=>a+b, 0) ? "badge over" : "badge"}>
-                {n}音
-              </span>
-            ))}
-          </div>
-          <h2 className="ks">清書欄</h2>
-          <textarea
-            value={""}
-            onChange={() => {}}
-            placeholder="漢字・カタカナを含む清書をここに入力…"
-            style={{ height: "6rem" }}
-          />
-        </>
-      )}
+      <label className="lbl">清書欄</label>
+      <textarea
+        className="clean"
+        placeholder="ここに漢字・カタカナを含む清書を入力"
+      />
     </div>
   );
 };
 
 export default TankaCounter;
-```
-
-```css
-/* App.css に追記 */
-.overlay-container {
-  position: relative;
-}
-
-.overlay-text {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0;
-  padding: 0.75rem;
-  pointer-events: none;
-  white-space: pre-wrap;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.overlay-container textarea {
-  position: relative;
-  width: 100%;
-  min-height: 6rem;
-  padding: 0.75rem;
-  background: transparent;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  resize: vertical;
-  line-height: 1.6;
-  color: #fff;
-}
-```
